@@ -17,13 +17,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/text_status"
-        android:text="Status" />
+        android:text="Status: " />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/text_speed"
-        android:text="Speed" />
+        android:text="Speed: " />
 
     <Button
         android:layout_width="wrap_content"

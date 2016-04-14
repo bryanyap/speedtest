@@ -1,6 +1,7 @@
 package models;
 
-import java.security.Timestamp;
+
+import java.sql.Timestamp;
 
 public class TestResult {
     private Timestamp timestamp;

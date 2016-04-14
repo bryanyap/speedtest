@@ -8,6 +8,7 @@ import com.firebase.client.Firebase;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Date;
 
 import me.bryanyap.speedtest.activities.MainActivity;
 import models.TestResult;
@@ -77,19 +78,15 @@ public class SpeedTestAsyncTask extends AsyncTask<String, String, TestResult> {
             e.printStackTrace();
         }
 
-        TestResult result = new TestResult();
-        result.setPeakSpeed(peakSpeed);
-        result.setAverageSpeed(averageSpeed);
-
-        return result;
+        return generateResult(peakSpeed, averageSpeed);
     }
 
     @Override
     protected void onProgressUpdate(String... values) {
         super.onProgressUpdate(values);
 
-        mainActivity.setStatusText(values[0]);
-        mainActivity.setSpeedText(values[1]);
+        mainActivity.setStatusText("Status: " + values[0]);
+        mainActivity.setSpeedText("Speed: " + values[1]);
     }
 
     @Override
@@ -98,7 +95,18 @@ public class SpeedTestAsyncTask extends AsyncTask<String, String, TestResult> {
         mainActivity.setStatusText("Done");
         mainActivity.setSpeedText("Average Speed: " + result.getAverageSpeed() + "KB/s");
 
-        Firebase firebase = mainActivity.getFirebase().child("results");
-        firebase.setValue(result);
+        Firebase resultsRef = mainActivity.getFirebase().child("results");
+        Firebase newResultRef = resultsRef.push();
+
+        newResultRef.setValue(result);
+    }
+
+    private TestResult generateResult(double peakSpeed, double averageSpeed) {
+        TestResult result = new TestResult();
+        result.setPeakSpeed(peakSpeed);
+        result.setAverageSpeed(averageSpeed);
+        result.setTimestamp(new java.sql.Timestamp(new Date().getTime()));
+
+        return result;
     }
 }
