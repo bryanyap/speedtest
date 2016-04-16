@@ -1,4 +1,4 @@
-package models;
+package me.bryanyap.speedtest.models;
 
 
 import java.sql.Timestamp;

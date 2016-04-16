@@ -1,36 +1,34 @@
-package me.bryanyap.speedtest.tasks;
+package me.bryanyap.speedtest.services;
 
+import android.app.Service;
+import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.AsyncTask;
+import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
+import com.firebase.client.AuthData;
 import com.firebase.client.Firebase;
+import com.firebase.client.FirebaseError;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Date;
 
-import me.bryanyap.speedtest.activities.MainActivity;
 import me.bryanyap.speedtest.models.TestResult;
 
-public class SpeedTestAsyncTask extends AsyncTask<String, String, TestResult> {
-    String TAG = "SpeedTestAsyncTask";
-    private MainActivity mainActivity = null;
-
+public class SpeedTestService extends Service {
+    private static final String TAG = "SpeedTestService";
+    Firebase fb = null;
     private SharedPreferences prefs = null;
 
-    public SpeedTestAsyncTask(MainActivity mainActivity) {
-        this.mainActivity = mainActivity;
-        this.prefs = PreferenceManager.getDefaultSharedPreferences(mainActivity.getBaseContext());
-    }
-
     @Override
-    protected TestResult doInBackground(String... params) {
+    public int onStartCommand(Intent intent, int flags, int startId) {
         double peakSpeed = 0;
         double averageSpeed = 0;
         try {
+            prefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
             int testSize = Integer.parseInt(prefs.getString("testSize", "10"));
 
             URL url;
@@ -70,8 +68,6 @@ public class SpeedTestAsyncTask extends AsyncTask<String, String, TestResult> {
                         peakSpeed = speed;
                     }
 
-                    publishProgress("Running", String.valueOf(speed) + "KB/s", "");
-
                     Log.v(TAG, String.valueOf(speed) + "KB/s");
                     counter = 0;
                 }
@@ -92,28 +88,29 @@ public class SpeedTestAsyncTask extends AsyncTask<String, String, TestResult> {
             e.printStackTrace();
         }
 
-        return generateResult(peakSpeed, averageSpeed);
-    }
+        TestResult result =  generateResult(peakSpeed, averageSpeed);
 
-    @Override
-    protected void onProgressUpdate(String... values) {
-        super.onProgressUpdate(values);
-
-        mainActivity.setStatusText(values[0]);
-        mainActivity.setSpeedText("Speed: " + values[1]);
-    }
-
-    @Override
-    protected void onPostExecute(TestResult result) {
-        super.onPostExecute(result);
-
-        mainActivity.setStatusText("Done");
-        mainActivity.setSpeedText("Average Speed: " + result.getAverageSpeed() + "KB/s");
-
-        Firebase resultsRef = mainActivity.getFirebase().child("results");
+        Firebase resultsRef = fb.child("results");
         Firebase newResultRef = resultsRef.push();
 
         newResultRef.setValue(result);
+
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    @Override
+    public void onCreate() {
+        prefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+
+        String email = prefs.getString("email", null);
+        String password = prefs.getString("password", null);
+        authenticate(email, password);
+
     }
 
     private TestResult generateResult(double peakSpeed, double averageSpeed) {
@@ -124,4 +121,21 @@ public class SpeedTestAsyncTask extends AsyncTask<String, String, TestResult> {
 
         return result;
     }
+
+    private void authenticate(String email, String password) {
+        String firebaseURLString = "https://boiling-inferno-6791.firebaseio.com/";
+        fb = new Firebase(firebaseURLString);
+        fb.authWithPassword(email, password, new Firebase.AuthResultHandler() {
+            @Override
+            public void onAuthenticated(AuthData authData) {
+
+            }
+
+            @Override
+            public void onAuthenticationError(FirebaseError firebaseError) {
+
+            }
+        });
+    }
+
 }
