@@ -7,20 +7,20 @@ import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
-import com.firebase.client.AuthData;
-import com.firebase.client.Firebase;
-import com.firebase.client.FirebaseError;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.Date;
 
+import me.bryanyap.speedtest.constants.ApplicationConstants;
+import me.bryanyap.speedtest.daos.TestResultDao;
+import me.bryanyap.speedtest.daos.TestResultDaoImpl;
 import me.bryanyap.speedtest.models.TestResult;
+import me.bryanyap.speedtest.utils.Util;
 
-public class SpeedTestService extends Service {
+public class SpeedTestService extends Service implements ApplicationConstants {
     private static final String TAG = "SpeedTestService";
-    Firebase fb = null;
+    TestResultDao testResultDao = new TestResultDaoImpl();
+    private Util util = new Util();
     private SharedPreferences prefs = null;
 
     @Override
@@ -32,12 +32,19 @@ public class SpeedTestService extends Service {
             int testSize = Integer.parseInt(prefs.getString("testSize", "10"));
 
             URL url;
-            if (testSize == 10) {
-                url = new URL("http://www.speedtest.com.sg/test_random_10mb.zip");
-            } else if (testSize == 100) {
-                url = new URL("http://www.speedtest.com.sg/test_random_100mb.zip");
-            } else {
-                url = new URL("http://www.speedtest.com.sg/test_random_500mb.zip");
+            switch (testSize) {
+                case 10:
+                    url = new URL(URL_10MB);
+                    break;
+                case 100:
+                    url = new URL(URL_100MB);
+                    break;
+                case 500:
+                    url = new URL(URL_500MB);
+                    break;
+                default:
+                    url = new URL(URL_10MB);
+                    break;
             }
 
             InputStream input = url.openConnection().getInputStream();
@@ -88,12 +95,8 @@ public class SpeedTestService extends Service {
             e.printStackTrace();
         }
 
-        TestResult result =  generateResult(peakSpeed, averageSpeed);
-
-        Firebase resultsRef = fb.child("results");
-        Firebase newResultRef = resultsRef.push();
-
-        newResultRef.setValue(result);
+        TestResult result = util.generateResult(peakSpeed, averageSpeed);
+        testResultDao.write(result);
 
         return super.onStartCommand(intent, flags, startId);
     }
@@ -109,33 +112,8 @@ public class SpeedTestService extends Service {
 
         String email = prefs.getString("email", null);
         String password = prefs.getString("password", null);
-        authenticate(email, password);
+        testResultDao.authenticate(email, password);
 
-    }
-
-    private TestResult generateResult(double peakSpeed, double averageSpeed) {
-        TestResult result = new TestResult();
-        result.setPeakSpeed(peakSpeed);
-        result.setAverageSpeed(averageSpeed);
-        result.setTimestamp(new java.sql.Timestamp(new Date().getTime()));
-
-        return result;
-    }
-
-    private void authenticate(String email, String password) {
-        String firebaseURLString = "https://boiling-inferno-6791.firebaseio.com/";
-        fb = new Firebase(firebaseURLString);
-        fb.authWithPassword(email, password, new Firebase.AuthResultHandler() {
-            @Override
-            public void onAuthenticated(AuthData authData) {
-
-            }
-
-            @Override
-            public void onAuthenticationError(FirebaseError firebaseError) {
-
-            }
-        });
     }
 
 }

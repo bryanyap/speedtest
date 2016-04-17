@@ -5,7 +5,6 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
@@ -17,25 +16,24 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.firebase.client.AuthData;
-import com.firebase.client.Firebase;
-import com.firebase.client.FirebaseError;
-
 import java.util.Calendar;
 
 import me.bryanyap.speedtest.R;
+import me.bryanyap.speedtest.constants.ApplicationConstants;
+import me.bryanyap.speedtest.daos.TestResultDao;
+import me.bryanyap.speedtest.daos.TestResultDaoImpl;
 import me.bryanyap.speedtest.services.SpeedTestService;
 import me.bryanyap.speedtest.tasks.SpeedTestAsyncTask;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ApplicationConstants, SpeedTestUI {
     private static final String TAG = "MainActivity";
 
     private TextView speedText = null;
     private TextView statusText = null;
     private Button testButton = null;
 
-    private Firebase fb = null;
+    private TestResultDao testResultDao = new TestResultDaoImpl();
     private SpeedTestAsyncTask speedTestAsyncTask = null;
     private SharedPreferences prefs = null;
 
@@ -72,13 +70,14 @@ public class MainActivity extends AppCompatActivity {
             testButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (speedTestAsyncTask.getStatus().equals(AsyncTask.Status.PENDING)) {
-                        speedTestAsyncTask.execute();
-                    } else if (speedTestAsyncTask.getStatus().equals(AsyncTask.Status.RUNNING)
-                            || speedTestAsyncTask.getStatus().equals(AsyncTask.Status.FINISHED)) {
-                        speedTestAsyncTask = new SpeedTestAsyncTask(MainActivity.this);
-                        speedTestAsyncTask.execute();
+                    if (testButton.getText().equals("Reset")) {
+                        resetUI();
+                    } else if (testButton.getText().equals("Test")) {
+                        startTest();
+                    } else if (testButton.getText().equals("Cancel")) {
+                        cancelTest();
                     }
+
                 }
             });
         }
@@ -103,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             Intent i = new Intent(this, AppPreference.class);
-            startActivity(i);
+            startActivityForResult(i, SETTINGS_CHANGED_REQUEST);
             return true;
         }
 
@@ -115,39 +114,67 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        Log.v(TAG, "Checking for settings change");
-        if (data.getBooleanExtra("changed", false)) {
-            Log.v(TAG, "Frequency changed, updating test schedule");
-            int frequency = Integer.parseInt(prefs.getString("frequency", "10"));
-            scheduleTest(frequency);
+        if (requestCode == SETTINGS_CHANGED_REQUEST && resultCode == AppPreference.RESULT_OK) {
+            Log.v(TAG, "data.getBooleanExtra()=" + data.getBooleanExtra(CHANGED, false));
+            if (data.getBooleanExtra("changed", false)) {
+                Log.v(TAG, "Frequency changed, updating test schedule");
+                int frequency = Integer.parseInt(prefs.getString(FREQUENCY, "10"));
+                scheduleTest(frequency);
+            }
         }
+
     }
 
+    @Override
     public void setSpeedText(String input) {
         this.speedText.setText(input);
     }
 
+    @Override
     public void setStatusText(String input) {
         this.statusText.setText(input);
     }
 
+    @Override
+    public void setTestButtonText(String input) {
+        this.testButton.setText(input);
+    }
+
+    @Override
+    public void notifyDone() {
+        setTestButtonText("Reset");
+    }
+
+    @Override
+    public void notifyCancelled() {
+        resetUI();
+    }
+
+    private void cancelTest() {
+        speedTestAsyncTask.cancel(true);
+    }
+
+    private void resetUI() {
+        statusText.setText("Ready");
+        speedText.setText("Speed: ");
+        testButton.setText("Test");
+    }
+
+    private void startTest() {
+        this.speedTestAsyncTask = new SpeedTestAsyncTask(this);
+        speedTestAsyncTask.execute();
+        testButton.setText("Cancel");
+    }
+
     private void authenticate(String email, String password) {
         statusText.setText("Authenticating");
-
         if (email != null && password != null) {
-            String firebaseURLString = "https://boiling-inferno-6791.firebaseio.com/";
-            fb = new Firebase(firebaseURLString);
-            fb.authWithPassword(email, password, new Firebase.AuthResultHandler() {
-                @Override
-                public void onAuthenticated(AuthData authData) {
-                    statusText.setText("Logged In");
-                }
-
-                @Override
-                public void onAuthenticationError(FirebaseError firebaseError) {
-                    statusText.setText("Authentication Failed");
-                }
-            });
+            testResultDao.authenticate(email, password);
+            if (testResultDao.isAuthenticated()) {
+                statusText.setText("Logged In");
+            } else {
+                statusText.setText("Authentication Failed");
+            }
         } else {
             statusText.setText("Please setup userid/password");
         }
@@ -174,8 +201,6 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    public Firebase getFirebase() {
-        return this.fb;
-    }
+
 
 }

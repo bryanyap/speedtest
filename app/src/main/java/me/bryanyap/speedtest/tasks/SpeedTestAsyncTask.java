@@ -5,24 +5,27 @@ import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
-import com.firebase.client.Firebase;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.Date;
 
 import me.bryanyap.speedtest.activities.MainActivity;
+import me.bryanyap.speedtest.activities.SpeedTestUI;
+import me.bryanyap.speedtest.constants.ApplicationConstants;
+import me.bryanyap.speedtest.daos.TestResultDao;
+import me.bryanyap.speedtest.daos.TestResultDaoImpl;
 import me.bryanyap.speedtest.models.TestResult;
+import me.bryanyap.speedtest.utils.Util;
 
-public class SpeedTestAsyncTask extends AsyncTask<String, String, TestResult> {
+public class SpeedTestAsyncTask extends AsyncTask<String, String, TestResult> implements ApplicationConstants {
     String TAG = "SpeedTestAsyncTask";
-    private MainActivity mainActivity = null;
-
+    private SpeedTestUI speedTestUI = null;
     private SharedPreferences prefs = null;
+    private Util util = new Util();
+    private TestResultDao testResultDao = new TestResultDaoImpl();
 
     public SpeedTestAsyncTask(MainActivity mainActivity) {
-        this.mainActivity = mainActivity;
+        this.speedTestUI = mainActivity;
         this.prefs = PreferenceManager.getDefaultSharedPreferences(mainActivity.getBaseContext());
     }
 
@@ -34,12 +37,19 @@ public class SpeedTestAsyncTask extends AsyncTask<String, String, TestResult> {
             int testSize = Integer.parseInt(prefs.getString("testSize", "10"));
 
             URL url;
-            if (testSize == 10) {
-                url = new URL("http://www.speedtest.com.sg/test_random_10mb.zip");
-            } else if (testSize == 100) {
-                url = new URL("http://www.speedtest.com.sg/test_random_100mb.zip");
-            } else {
-                url = new URL("http://www.speedtest.com.sg/test_random_500mb.zip");
+            switch (testSize) {
+                case 10:
+                    url = new URL(URL_10MB);
+                    break;
+                case 100:
+                    url = new URL(URL_100MB);
+                    break;
+                case 500:
+                    url = new URL(URL_500MB);
+                    break;
+                default:
+                    url = new URL(URL_10MB);
+                    break;
             }
 
             InputStream input = url.openConnection().getInputStream();
@@ -92,36 +102,31 @@ public class SpeedTestAsyncTask extends AsyncTask<String, String, TestResult> {
             e.printStackTrace();
         }
 
-        return generateResult(peakSpeed, averageSpeed);
+        return util.generateResult(peakSpeed, averageSpeed);
     }
 
     @Override
     protected void onProgressUpdate(String... values) {
         super.onProgressUpdate(values);
 
-        mainActivity.setStatusText(values[0]);
-        mainActivity.setSpeedText("Speed: " + values[1]);
+        speedTestUI.setStatusText(values[0]);
+        speedTestUI.setSpeedText("Speed: " + values[1]);
     }
 
     @Override
     protected void onPostExecute(TestResult result) {
         super.onPostExecute(result);
 
-        mainActivity.setStatusText("Done");
-        mainActivity.setSpeedText("Average Speed: " + result.getAverageSpeed() + "KB/s");
+        speedTestUI.setStatusText("Done");
+        speedTestUI.setSpeedText("Average Speed: " + result.getAverageSpeed() + "KB/s");
+        speedTestUI.notifyDone();
 
-        Firebase resultsRef = mainActivity.getFirebase().child("results");
-        Firebase newResultRef = resultsRef.push();
-
-        newResultRef.setValue(result);
+        testResultDao.write(result);
     }
 
-    private TestResult generateResult(double peakSpeed, double averageSpeed) {
-        TestResult result = new TestResult();
-        result.setPeakSpeed(peakSpeed);
-        result.setAverageSpeed(averageSpeed);
-        result.setTimestamp(new java.sql.Timestamp(new Date().getTime()));
-
-        return result;
+    @Override
+    protected void onCancelled() {
+        super.onCancelled();
+        speedTestUI.notifyCancelled();
     }
 }

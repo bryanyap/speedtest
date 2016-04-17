@@ -8,9 +8,13 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 import me.bryanyap.speedtest.R;
+import me.bryanyap.speedtest.constants.ApplicationConstants;
 
-public class AppPreference extends PreferenceActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
+public class AppPreference extends PreferenceActivity implements ApplicationConstants {
     private static final String TAG = "AppPreference";
+    private String initialFrequency = "";
+    SharedPreferences prefs = null;
+    SharedPreferences.OnSharedPreferenceChangeListener listener = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -18,35 +22,50 @@ public class AppPreference extends PreferenceActivity implements SharedPreferenc
         addPreferencesFromResource(R.xml.preferences);
 
         PreferenceManager.setDefaultValues(this.getApplicationContext(), R.xml.preferences, false);
+
+        listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+            @Override
+            public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+                if (key.equals(FREQUENCY)) {
+                    Intent resultIntent = new Intent();
+                    if (!sharedPreferences.getString(FREQUENCY, "10").equals(initialFrequency)) {
+                        Log.v(TAG, "frequency changed");
+                        resultIntent.putExtra(CHANGED, true);
+                    } else {
+                        Log.v(TAG, "frequency not changed");
+                        resultIntent.putExtra(CHANGED, false);
+                    }
+                    setResult(PreferenceActivity.RESULT_OK, resultIntent);
+                }
+
+            }
+        };
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
+    protected void onStart() {
+        super.onStart();
+        prefs = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+        initialFrequency = prefs.getString(FREQUENCY, "10");
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        Log.v(TAG, "onBackPressed()");
         finish();
-    }
-
-    @Override
-    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-        Log.v(TAG, "onSharedPreferenceChanged(), key=" + key);
-        Intent resultIntent = new Intent();
-        if (key.equals("frequency")) {
-            resultIntent.putExtra("changed", true);
-            setResult(PreferenceActivity.RESULT_OK, resultIntent);
-        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        getPreferenceScreen().getSharedPreferences()
-                .registerOnSharedPreferenceChangeListener(this);
+        prefs.registerOnSharedPreferenceChangeListener(listener);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        getPreferenceScreen().getSharedPreferences()
-                .unregisterOnSharedPreferenceChangeListener(this);
+        prefs.unregisterOnSharedPreferenceChangeListener(listener);
     }
+
 }
