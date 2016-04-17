@@ -9,6 +9,7 @@ public class TestResult {
     private String deviceID;
     private double peakSpeed;
     private double averageSpeed;
+    private String type;
 
     public Timestamp getTimestamp() {
         return timestamp;
@@ -49,4 +50,8 @@ public class TestResult {
     public void setAverageSpeed(double averageSpeed) {
         this.averageSpeed = averageSpeed;
     }
+
+    public String getType() { return type; }
+
+    public void setType(String type) { this.type = type; }
 }

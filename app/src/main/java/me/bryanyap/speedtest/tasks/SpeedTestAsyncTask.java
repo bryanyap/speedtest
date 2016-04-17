@@ -1,5 +1,6 @@
 package me.bryanyap.speedtest.tasks;
 
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.preference.PreferenceManager;
@@ -9,7 +10,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 
-import me.bryanyap.speedtest.activities.MainActivity;
 import me.bryanyap.speedtest.activities.SpeedTestUI;
 import me.bryanyap.speedtest.constants.ApplicationConstants;
 import me.bryanyap.speedtest.daos.TestResultDao;
@@ -24,9 +24,9 @@ public class SpeedTestAsyncTask extends AsyncTask<String, String, TestResult> im
     private Util util = new Util();
     private TestResultDao testResultDao = new TestResultDaoImpl();
 
-    public SpeedTestAsyncTask(MainActivity mainActivity) {
-        this.speedTestUI = mainActivity;
-        this.prefs = PreferenceManager.getDefaultSharedPreferences(mainActivity.getBaseContext());
+    public SpeedTestAsyncTask(SpeedTestUI speedTestUI, Context baseContext) {
+        this.speedTestUI = speedTestUI;
+        this.prefs = PreferenceManager.getDefaultSharedPreferences(baseContext);
     }
 
     @Override
@@ -102,7 +102,7 @@ public class SpeedTestAsyncTask extends AsyncTask<String, String, TestResult> im
             e.printStackTrace();
         }
 
-        return util.generateResult(peakSpeed, averageSpeed);
+        return util.generateResult(peakSpeed, averageSpeed, USER_INITIATED, prefs.getString(LOCATION, null));
     }
 
     @Override

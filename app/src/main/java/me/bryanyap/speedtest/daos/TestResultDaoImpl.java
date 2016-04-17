@@ -4,8 +4,6 @@ import com.firebase.client.AuthData;
 import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
 
-import java.util.Date;
-
 import me.bryanyap.speedtest.constants.ApplicationConstants;
 import me.bryanyap.speedtest.models.TestResult;
 

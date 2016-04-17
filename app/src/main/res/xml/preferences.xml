@@ -19,4 +19,8 @@
         android:summary="Input the frequency of testing in minutes."
         android:numeric="integer"
         android:defaultValue="10"/>
+    <EditTextPreference android:title="Location"
+        android:key="location"
+        android:summary="Input the location."
+        android:defaultValue="dev"/>
 </PreferenceScreen>

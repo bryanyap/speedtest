@@ -7,9 +7,13 @@ public interface ApplicationConstants {
 
     String CHANGED = "changed";
     String FREQUENCY = "frequency";
+    String LOCATION = "location";
 
     String FIREBASE = "https://boiling-inferno-6791.firebaseio.com/";
     String RESULTS = "results";
+
+    String USER_INITIATED = "user_initiated";
+    String SYSTEM_INITIATED = "system_initiated";
 
     int SETTINGS_CHANGED_REQUEST = 1;
 }

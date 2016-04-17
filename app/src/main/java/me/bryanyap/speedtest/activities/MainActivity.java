@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity implements ApplicationConsta
         String password = prefs.getString("password", null);
         authenticate(email, password);
 
-        speedTestAsyncTask = new SpeedTestAsyncTask(this);
+        speedTestAsyncTask = new SpeedTestAsyncTask(this ,this.getBaseContext());
 
         testButton = (Button) findViewById(R.id.button_test);
         if (testButton != null) {
@@ -88,7 +88,6 @@ public class MainActivity extends AppCompatActivity implements ApplicationConsta
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
-
         return true;
     }
 
@@ -161,21 +160,25 @@ public class MainActivity extends AppCompatActivity implements ApplicationConsta
     }
 
     private void startTest() {
-        this.speedTestAsyncTask = new SpeedTestAsyncTask(this);
+        this.speedTestAsyncTask = new SpeedTestAsyncTask(this, this.getBaseContext());
         speedTestAsyncTask.execute();
         testButton.setText("Cancel");
     }
 
     private void authenticate(String email, String password) {
         statusText.setText("Authenticating");
+        Log.v(TAG, "Authenticating");
         if (email != null && password != null) {
             testResultDao.authenticate(email, password);
             if (testResultDao.isAuthenticated()) {
+                Log.v(TAG, "Logged in: " + email);
                 statusText.setText("Logged In");
             } else {
+                Log.v(TAG, "Authentication Failed");
                 statusText.setText("Authentication Failed");
             }
         } else {
+            Log.v(TAG, "Email or password not set up");
             statusText.setText("Please setup userid/password");
         }
     }
@@ -187,8 +190,12 @@ public class MainActivity extends AppCompatActivity implements ApplicationConsta
         PendingIntent pintent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
 
         AlarmManager alarm = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        alarm.setRepeating(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), frequency * 60 * 1000, pintent);
 
+//        alarm.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, cal.getTimeInMillis(), frequency * 60 * 1000, pintent);
+        alarm.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, cal.getTimeInMillis(), frequency * 1000, pintent);
+
+//        Log.v(TAG, "Scheduled test with frequency of " + frequency + "mins");
+        Log.v(TAG, "Scheduled test with frequency of " + frequency + "seconds");
     }
 
     public boolean testExists() {
